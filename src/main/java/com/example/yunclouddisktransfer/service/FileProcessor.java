@@ -4,6 +4,7 @@ import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
+import com.example.yunclouddisktransfer.utils.ImageSize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -63,15 +64,16 @@ public class FileProcessor {
                 // Generate all four thumbnails (S, M, L, XL)
                 Map<String, File> thumbs = thumbnailService.createAllThumbnails(temp, name, format);
                 for (Map.Entry<String, File> entry : thumbs.entrySet()) {
-                    String sizeType = entry.getKey();
+                    String size = entry.getKey();
+                    String sizeType = ImageSize.fromResolution(Integer.parseInt(size)).getLabel();
                     File thumbFile = entry.getValue();
-                    String uploadUrl = thumbnailUrls != null ? thumbnailUrls.get(sizeType) : null;
+                    String uploadUrl = thumbnailUrls != null ? thumbnailUrls.get(size) : null;
                     if (uploadUrl != null) {
                         s3Service.uploadFile(uploadUrl, thumbFile, "image/"+format);
                         FileDerivative derivative = new FileDerivative();
                         derivative.setPhysicalFileId(fileId);
                         derivative.setType("thumbnail");
-                        derivative.setSize(getSizeForType(sizeType));
+                        derivative.setSize(Integer.parseInt(size));
                         derivative.setS3Path(fileId +"-"+ fileHash+"-thumb-"+sizeType+"."+format);
                         derivative.setFormat(format);
                         fileDerivativeMapper.insert(derivative);
@@ -90,13 +92,4 @@ public class FileProcessor {
         }
     }
 
-    private Integer getSizeForType(String sizeType) {
-        switch (sizeType) {
-            case "S": return 128;
-            case "M": return 480;
-            case "L": return 800;
-            case "XL": return 1080;
-            default: return null;
-        }
-    }
-} 
+}

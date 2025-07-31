@@ -54,11 +54,10 @@ public class ThumbnailService {
         // S, M, L, XL
         int[] sizes = {SIZE_S, SIZE_M, SIZE_L, SIZE_XL};
         int[] qualities = {QUALITY_S, QUALITY_M, QUALITY_L, QUALITY_XL};
-        String[] sizeNames = {"S", "M", "L", "XL"};
         for (int i = 0; i < sizes.length; i++) {
             File thumb = createThumbnailWithRules(img, sizes[i], outFormat, qualities[i]);
             if(thumb != null){
-                result.put(sizeNames[i], thumb);
+                result.put(String.valueOf(sizes[i]), thumb);
             }
         }
         return result;
