@@ -9,11 +9,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.example.yunclouddisktransfer.mq.StandardMessage;
+import com.example.yunclouddisktransfer.mq.FileEvent;
 
 @Service
 @RocketMQMessageListener(
-        topic = "transfer_file",
-        consumerGroup = "transfer_file_group",
+        topic = "file_thumbnail",
+        consumerGroup = "file_thumbnail_group",
         messageModel = MessageModel.CLUSTERING
 )
 public class PassFileListener implements RocketMQListener<String> {
@@ -25,41 +27,20 @@ public class PassFileListener implements RocketMQListener<String> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // 新的 TransferFileEvent 数据结构
-    public static class TransferFileEvent {
-        public String fullFileIdPath;
-        public String fileHash;
-        public String createdAt;
-        public String parentFileId;
-        public String filePosition;
-        public String name;
-        public String fileType;
-        public String fileId;
-        public String updatedAt;
-        public String eventTime;
-        public String eventType;
-        public String messageId;
-        public String userId;
-        public String downloadUrl;
-        public Map<String, String> thumbUploadUrls;
-        public Map<String, String> transcodedVideoUploadUrls;
-        public String baseName;
-    }
-
     @Override
     public void onMessage(String message) {
         try {
             logger.info("Received message: {}", message);
-            TransferFileEvent event = objectMapper.readValue(message, TransferFileEvent.class);
-            String fileType = event.fileType;
+            StandardMessage stdMsg = objectMapper.readValue(message, StandardMessage.class);
+            FileEvent event = stdMsg.getContent();
+            String fileType = event.getFileType();
             
             if (fileType.contains("image")) {
-                logger.info("Processing file: {} (type: {})", event.name, fileType);
-                fileProcessor.processFile(event.baseName, event.fileId, fileType, event.downloadUrl, 
-                                        event.thumbUploadUrls, event.transcodedVideoUploadUrls);
-                logger.info("Successfully processed file: {}", event.name);
+                logger.info("Processing file: {} (type: {})", event.getName(), fileType);
+                fileProcessor.processFile(event.getName(), event.getFileHash(), event.getPhysicsFileId().toString(), fileType, event.getDownloadUrl(), event.getThumbUploadUrls());
+                logger.info("Successfully processed file: {}", event.getName());
             } else {
-                logger.info("Skipping file: {} (unsupported type: {})", event.name, fileType);
+                logger.info("Skipping file: {} (unsupported type: {})", event.getName(), fileType);
             }
 
         } catch (Exception e) {
